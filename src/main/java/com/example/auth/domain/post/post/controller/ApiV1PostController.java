@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+
 @RestController
 @RequestMapping("/api/v1/posts")
 @RequiredArgsConstructor
@@ -52,13 +53,32 @@ public class ApiV1PostController {
         );
     }
 
+    record DeleteReqBody(@NotNull Long authorId,
+                         @NotBlank @Length(min = 3) String password
+    ) {
+    }
+
     @DeleteMapping("/{id}")
-    public RsData<Void> delete(@PathVariable long id) {
+    public RsData<Void> delete(@PathVariable long id,
+                               @RequestHeader Long authorId,
+                               @RequestHeader String password) {
+
+        Member actor = memberService.findById(authorId).get();
+
+        if (!actor.getPassword().equals(password)) {
+            throw new ServiceException("401-1", "비밀번호가 일치하지 않습니다.");
+        }
+
         Post post = postService.getItem(id).get();
+
+        if(post.getAuthor().getId() != authorId) {
+            throw new ServiceException("403-1", "자신이 작성한 글만 삭제 가능합니다.");
+        }
+
         postService.delete(post);
 
         return new RsData<>(
-                "204-1",
+                "200-1",
                 "%d번 글 삭제가 완료되었습니다.".formatted(id)
         );
     }
@@ -67,23 +87,23 @@ public class ApiV1PostController {
     record ModifyReqBody(@NotBlank @Length(min = 3) String title,
                          @NotBlank @Length(min = 3) String content,
                          @NotNull Long authorId,
-                         @NotBlank @Length(min = 3) String password) {
+                         @NotBlank @Length(min = 3) String password
+    ) {
     }
 
     @PutMapping("{id}")
-    public RsData<Void> modify(@PathVariable long id,
-                               @RequestBody @Valid ModifyReqBody body) {
+    public RsData<Void> modify(@PathVariable long id, @RequestBody @Valid ModifyReqBody body) {
 
         Member actor = memberService.findById(body.authorId()).get();
 
-        if(!actor.getPassword().equals(body.password())) {
+        if (!actor.getPassword().equals(body.password())) {
             throw new ServiceException("401-1", "비밀번호가 일치하지 않습니다.");
         }
 
         Post post = postService.getItem(id).get();
 
-        if(post.getAuthor().getId() != actor.getId()) {
-            throw new ServiceException("403-2", "자신이 작성한 글만 수정 간으합니다");
+        if(post.getAuthor().getId() != body.authorId()) {
+            throw new ServiceException("403-1", "자신이 작성한 글만 수정 가능합니다.");
         }
 
         postService.modify(post, body.title(), body.content());
@@ -93,6 +113,7 @@ public class ApiV1PostController {
                 null
         );
     }
+
 
     record WriteReqBody(
             @NotBlank @Length(min = 3) String title,
@@ -106,9 +127,10 @@ public class ApiV1PostController {
 
         Member actor = memberService.findById(body.authorId()).get();
 
-        if(!actor.getPassword().equals(body.password())) {
+        if (!actor.getPassword().equals(body.password())) {
             throw new ServiceException("401-1", "비밀번호가 일치하지 않습니다.");
         }
+
         Post post = postService.write(actor, body.title(), body.content());
 
         return new RsData<>(
@@ -117,5 +139,4 @@ public class ApiV1PostController {
                 new PostDto(post)
         );
     }
-
 }

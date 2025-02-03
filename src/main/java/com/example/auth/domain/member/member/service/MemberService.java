@@ -21,7 +21,7 @@ public class MemberService {
         Member member = Member.builder()
                 .username(username)
                 .password(password)
-                .password2(uuid.toString())
+                .apiKey(username)
                 .nickname(nickname)
                 .build();
 
@@ -38,5 +38,9 @@ public class MemberService {
 
     public Optional<Member> findById(long id) {
         return memberRepository.findById(id);
+    }
+
+    public Optional<Member> findByApiKey(String password2) {
+        return memberRepository.findByApiKey(password2);
     }
 }

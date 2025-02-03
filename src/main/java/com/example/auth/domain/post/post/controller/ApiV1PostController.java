@@ -15,6 +15,7 @@ import org.hibernate.validator.constraints.Length;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Optional;
 
 
 @RestController
@@ -121,22 +122,14 @@ public class ApiV1PostController {
 
         String authorizationValue = request.getHeader("Authorization");
 
-        // Bearer 4/user11234
-        String credentials = authorizationValue.substring("Bearer ".length());
+        String password2 = authorizationValue.substring("Bearer ".length());
+        Optional<Member> opActor = memberService.findByApiKey(password2);
 
-        String[] credentialsBits = credentials.split("/");
-        long authorId = Long.parseLong(credentialsBits[0]);
-        String password = credentialsBits[1];
-
-        Member actor = memberService.findById(authorId).get();
-
-        if (!actor.getPassword2().equals(password)) {
-            throw new ServiceException("401-1", "비밀번호가 일치하지 않습니다.");
+        if(opActor.isEmpty()){
+            throw new ServiceException("401-1", "잘못된 비밀번호 입니다.");
         }
 
-        return actor;
-
+        return opActor.get();
     }
-
 
 }
